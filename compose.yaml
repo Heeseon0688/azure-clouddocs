@@ -1,0 +1,82 @@
+name: azure-clouddocs
+
+# 모든 값은 .env(또는 셸 환경변수)로 덮어쓸 수 있다. 기본값은 "로컬 개발 전용" 값이다.
+# AZURE_STORAGE_CONNECTION_STRING 기본값의 AccountKey는 Microsoft가 공개한 Azurite 개발용 고정 키이며 비밀값이 아니다.
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-clouddocs}
+      MYSQL_USER: ${MYSQL_USER:-clouddocs}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-clouddocs-local}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-local}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # 127.0.0.1(TCP)로 확인: 초기화 중 임시 서버(--skip-networking)는 통과하지 못하므로 "진짜 준비 완료"만 감지된다
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    # --skipApiVersionCheck: 최신 Azure SDK가 사용하는 REST API 버전을 에뮬레이터가 아직 모를 때를 대비
+    command: >
+      azurite-blob --blobHost 0.0.0.0 --blobPort 10000
+      --location /data --loose --skipApiVersionCheck
+    ports:
+      - "${AZURITE_BLOB_PORT:-10000}:10000"
+    volumes:
+      - azurite-data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-clouddocs}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      DB_USERNAME: ${MYSQL_USER:-clouddocs}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-clouddocs-local}
+      # 컨테이너 내부에서는 localhost가 아닌 서비스 호스트명 "azurite"로 접속한다
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-documents}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3100,http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-8081}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-3100}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  azurite-data:

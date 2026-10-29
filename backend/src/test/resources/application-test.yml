@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:clouddocs;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+azure:
+  storage:
+    # 기본값은 Azure SDK 표준 단축 문자열(로컬 Azurite 127.0.0.1:10000). 키를 파일에 두지 않는다.
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:UseDevelopmentStorage=true}
+    container-name: clouddocs-it

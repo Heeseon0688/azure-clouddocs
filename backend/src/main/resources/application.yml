@@ -1,0 +1,43 @@
+server:
+  port: 8080
+  tomcat:
+    # 업로드 한도(10MB) 초과 요청도 끝까지 읽은 뒤 413 JSON 응답을 돌려주기 위함
+    max-swallow-size: 20MB
+
+spring:
+  application:
+    name: azure-clouddocs
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/clouddocs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:clouddocs}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
+azure:
+  storage:
+    # 비밀값은 코드에 두지 않고 환경변수로만 주입한다 (Azurite / 실제 Azure 모두 동일한 방식)
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
+    container-name: ${AZURE_STORAGE_CONTAINER:documents}
+
+clouddocs:
+  upload:
+    max-file-size: 10MB
+    allowed-extensions: pdf,png,jpg,jpeg,txt
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3100}
+
+logging:
+  level:
+    com.azure: WARN
+    com.clouddocs: INFO
