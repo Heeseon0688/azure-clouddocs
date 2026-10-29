@@ -3,6 +3,14 @@
 Azure Blob Storage 기반 기업용 문서 관리 웹 서비스입니다.
 파일은 Azure Blob Storage에, 메타데이터는 MySQL에 저장합니다. 로컬에서는 Azurite 에뮬레이터로 Azure 계정 없이 실행됩니다.
 
+![대시보드](docs/images/dashboard.png)
+
+## 화면
+
+| 문서 관리 | 모바일 |
+|---|---|
+| <img src="docs/images/documents.png" alt="문서 관리" width="640"> | <img src="docs/images/mobile.png" alt="모바일" width="230"> |
+
 ## 주요 기능
 
 - 파일 업로드 (PDF, PNG, JPG, TXT / 최대 10MB)
@@ -23,13 +31,7 @@ Azure Blob Storage 기반 기업용 문서 관리 웹 서비스입니다.
 
 ## 아키텍처
 
-```
-Browser ──▶ frontend (nginx :3100)
-              ├─ React 정적 파일
-              └─ /api ──▶ backend (Spring Boot :8080)
-                             ├─ MySQL     : 파일 메타데이터
-                             └─ Azurite   : 파일 바이너리 (Azure Blob SDK)
-```
+![시스템 구조](docs/images/architecture.png)
 
 ## 시작하기
 
@@ -127,6 +129,7 @@ docker run --rm --network azure-clouddocs_default \
 │       ├── exception/
 │       └── config/
 ├── frontend/                React + TypeScript
+├── docs/images/             README 스크린샷
 ├── compose.yaml
 └── .env.example
 ```
